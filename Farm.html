@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biome Farmer - A Food Security Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 1rem;
+            height: calc(100vh - 2rem);
+        }
+        .main-content {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 1rem;
+        }
+        .farm-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 8px;
+            background-color: #a37b4b; /* Soil color */
+            border-radius: 0.5rem;
+            padding: 8px;
+            border: 4px solid #785533;
+        }
+        .plot {
+            background-color: #8b6e4b;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            position: relative;
+        }
+        .plot:hover { background-color: #9c7f5a; transform: scale(1.05); }
+        .plot.planted { background-color: #5a8b4b; }
+        .plot.fertile { background-color: #6b553a; border: 2px dashed #c6a775; }
+        .plot .growth-bar { position: absolute; bottom: 2px; left: 2px; right: 2px; height: 6px; background-color: rgba(0,0,0,0.2); border-radius: 3px; overflow: hidden; }
+        .plot .growth-bar-inner { height: 100%; width: 0%; background-color: #65c368; transition: width 0.5s linear; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.3s; }
+        .health-bar-inner { transition: width 0.5s ease-out; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4">
+
+    <!-- Biome Selection Modal -->
+    <div id="biome-selection-modal" class="modal-overlay">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg text-center">
+            <h1 class="text-3xl font-bold text-green-800 mb-2">Welcome to Biome Farmer!</h1>
+            <p class="text-gray-600 mb-6">Your goal is to support a community of 20 people for 3 years. Choose your starting biome:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button data-biome="temperate" class="biome-choice-btn p-4 border-2 border-transparent rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
+                    <h2 class="text-xl font-bold">Temperate Grassland</h2>
+                    <p class="text-sm text-gray-500">(e.g., South Australia)</p>
+                    <p class="mt-2 text-sm">Mild climate with balanced seasons. Good for traditional grain crops.</p>
+                    <p class="mt-1 font-semibold text-sm">Challenge: Prone to summer heatwaves and winter frosts.</p>
+                </button>
+                <button data-biome="savanna" class="biome-choice-btn p-4 border-2 border-transparent rounded-lg hover:border-green-500 hover:bg-green-50 transition">
+                    <h2 class="text-xl font-bold">Tropical Savanna</h2>
+                    <p class="text-sm text-gray-500">(e.g., Northern Territory)</p>
+                    <p class="mt-2 text-sm">Distinct wet and dry seasons. Supports resilient, unique crops.</p>
+                    <p class="mt-1 font-semibold text-sm">Challenge: Intense wet season can flood crops without proper management.</p>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container" class="game-container max-w-screen-2xl mx-auto hidden">
+        <div class="main-content">
+            <!-- Header & Stats -->
+            <header class="bg-white p-4 rounded-lg shadow">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h1 class="text-2xl font-bold text-green-800">Biome Farmer</h1>
+                        <p id="biome-name" class="text-lg text-gray-600">Now Farming: Temperate Grassland</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-xl">Goal: Support 20 People for 3 Years</p>
+                        <p id="goal-status" class="text-gray-600">Year 1, Spring</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-5 gap-4 text-center">
+                    <div><span class="text-sm text-gray-500 block">Food Status</span><span id="food-status-display" class="text-xl font-semibold">Surplus: 0</span></div>
+                    <div><span class="text-sm text-gray-500 block">Water</span><span id="water-display" class="text-xl font-semibold">💧 50</span></div>
+                    <div><span class="text-sm text-gray-500 block">Money</span><span id="money-display" class="text-xl font-semibold">$100</span></div>
+                    <div><span class="text-sm text-gray-500 block">Food Units</span><span id="food-display" class="text-xl font-semibold">0</span></div>
+                    <div><span class="text-sm text-gray-500 block">Biome Health</span>
+                        <div class="w-full bg-gray-200 rounded-full h-4 mt-1">
+                            <div id="health-bar-inner" class="health-bar-inner bg-green-600 h-4 rounded-full" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <main id="farm-grid" class="farm-grid shadow-inner"></main>
+        </div>
+
+        <!-- Right Side: Control Panel -->
+        <aside class="bg-white p-4 rounded-lg shadow flex flex-col space-y-3">
+            <div><h3 class="font-semibold">1. Plant a Crop</h3><div id="crop-selections" class="space-y-1 mt-1"></div></div>
+            <div><h3 class="font-semibold">2. Management Practice</h3><div id="management-practices" class="space-y-1 mt-1"></div></div>
+            <div><h3 class="font-semibold">Advisor</h3><div id="advisor-log" class="h-24 bg-blue-50 border border-blue-200 rounded-md p-2 text-sm overflow-y-auto text-blue-800"></div></div>
+            <div><h3 class="font-semibold">Event Log</h3><div id="event-log" class="h-24 bg-gray-50 border rounded-md p-2 text-sm overflow-y-auto"></div></div>
+            <div class="mt-auto pt-2 border-t"><button id="next-season-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">End Season</button></div>
+        </aside>
+    </div>
+
+    <!-- Plot Action & End Game Modals -->
+    <div id="plot-modal" class="modal-overlay hidden opacity-0"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm text-center"><h2 class="text-xl font-bold mb-4">Plot Actions</h2><div id="plot-info" class="mb-4"></div><div class="space-y-2"><button id="harvest-btn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Harvest</button><button id="clear-plot-btn" class="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Clear Plot</button></div><button id="close-modal-btn" class="mt-4 w-full bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400">Close</button></div></div>
+    <div id="end-game-modal" class="modal-overlay hidden opacity-0"><div id="end-game-content" class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md text-center"></div></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIGURATION ---
+            const NUM_PLOTS = 40;
+            const COMMUNITY_SIZE = 20;
+            const FOOD_PER_PERSON = 2;
+            const BIOMES = {
+                temperate: {
+                    name: "Temperate Grassland",
+                    crops: {
+                        wheat: { name: 'Wheat', emoji: '🌾', cost: 10, yield: 25, food: 5, growthTime: 1, idealSeasons: ['Spring', 'Autumn'] },
+                        canola: { name: 'Canola', emoji: '🌻', cost: 15, yield: 40, food: 3, growthTime: 1, idealSeasons: ['Spring'] },
+                        barley: { name: 'Barley', emoji: '🍺', cost: 8, yield: 20, food: 4, growthTime: 1, idealSeasons: ['Autumn', 'Winter'] },
+                        lentils: { name: 'Lentils', emoji: '🌱', cost: 20, yield: 50, food: 8, growthTime: 2, idealSeasons: ['Spring'] },
+                    },
+                    events: {
+                        Spring: [{ type: 'BOON', text: 'Perfect growing conditions! Water reserves replenished.', effect: 'water_gain_high' }],
+                        Summer: [{ type: 'CHALLENGE', text: 'Heatwave! Water is scarce and evaporates quickly.', effect: 'water_loss' }, { type: 'NEUTRAL', text: 'A calm, sunny summer.', effect: 'water_gain_low' }],
+                        Autumn: [{ type: 'NEUTRAL', text: 'Steady rains fall.', effect: 'water_gain_med' }],
+                        Winter: [{ type: 'CHALLENGE', text: 'Frost hits the farm! Unharvested crops are at risk.', effect: 'crop_loss' }, { type: 'NEUTRAL', text: 'A cold but stable winter.', effect: 'water_gain_low' }],
+                    }
+                },
+                savanna: {
+                    name: "Tropical Savanna",
+                    crops: {
+                        sorghum: { name: 'Sorghum', emoji: '🌽', cost: 12, yield: 30, food: 6, growthTime: 1, idealSeasons: ['Summer'] }, // Summer is wet season
+                        mango: { name: 'Mangoes', emoji: '🥭', cost: 25, yield: 60, food: 4, growthTime: 2, idealSeasons: ['Summer', 'Autumn'] },
+                        peanut: { name: 'Peanuts', emoji: '🥜', cost: 10, yield: 25, food: 3, growthTime: 1, idealSeasons: ['Summer'] },
+                        millet: { name: 'Millet', emoji: '🌾', cost: 8, yield: 22, food: 5, growthTime: 1, idealSeasons: ['Autumn'] },
+                    },
+                     events: {
+                        Spring: [{ type: 'NEUTRAL', text: 'The dry season ends. The air is tense with anticipation for the rains.', effect: 'water_gain_low' }],
+                        Summer: [{ type: 'CHALLENGE', text: 'Monsoonal rains! Risk of flooding on unprepared land.', effect: 'flood_risk' }, { type: 'BOON', text: 'Perfect wet season. Water is abundant!', effect: 'water_gain_high' }],
+                        Autumn: [{ type: 'NEUTRAL', text: 'The rains ease, leaving the land lush and fertile.', effect: 'water_gain_med' }],
+                        Winter: [{ type: 'NEUTRAL', text: 'The dry season begins. The air is cool and clear.', effect: null }],
+                    }
+                }
+            };
+            const MANAGEMENT_PRACTICES = {
+                fertilizer: { name: 'Chemical Fertilizer', description: 'Costs $30. Boosts yield but harms soil biodiversity.', cost: { money: 30 }, effect: 'yield_boost_high', health_impact: -15 },
+                irrigation: { name: 'Modern Irrigation', description: 'Costs $20 & 30 Water. Increases yield, minor environmental strain.', cost: { money: 20, water: 30 }, effect: 'yield_boost_med', health_impact: -5 },
+                mulching: { name: 'Sustainable Mulching', description: 'Costs $10. Conserves water and protects soil health.', cost: { money: 10 }, effect: 'conserve_water', health_impact: 5 },
+                cultural_burning: { name: 'Cultural Burning', description: 'Costs 5 Food. Greatly improves soil health and prevents wildfires.', cost: { food: 5 }, effect: 'enrich_soil', health_impact: 20 },
+            };
+            const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter'];
+
+            // --- GAME STATE ---
+            let gameState = {};
+
+            // --- DOM ELEMENTS ---
+            const dom = {
+                gameContainer: document.getElementById('game-container'),
+                biomeSelectionModal: document.getElementById('biome-selection-modal'),
+                farmGrid: document.getElementById('farm-grid'),
+                moneyDisplay: document.getElementById('money-display'),
+                foodDisplay: document.getElementById('food-display'),
+                waterDisplay: document.getElementById('water-display'),
+                seasonDisplay: document.getElementById('season-display'),
+                cropSelections: document.getElementById('crop-selections'),
+                managementPractices: document.getElementById('management-practices'),
+                eventLog: document.getElementById('event-log'),
+                advisorLog: document.getElementById('advisor-log'),
+                nextSeasonBtn: document.getElementById('next-season-btn'),
+                plotModal: document.getElementById('plot-modal'),
+                plotInfo: document.getElementById('plot-info'),
+                harvestBtn: document.getElementById('harvest-btn'),
+                clearPlotBtn: document.getElementById('clear-plot-btn'),
+                closeModalBtn: document.getElementById('close-modal-btn'),
+                biomeName: document.getElementById('biome-name'),
+                goalStatus: document.getElementById('goal-status'),
+                foodStatusDisplay: document.getElementById('food-status-display'),
+                healthBarInner: document.getElementById('health-bar-inner'),
+                endGameModal: document.getElementById('end-game-modal'),
+                endGameContent: document.getElementById('end-game-content'),
+            };
+            
+            let activePlotIndex = null;
+            let currentBiome = null;
+
+            // --- INITIALIZATION ---
+            function setupBiomeSelection() {
+                document.querySelectorAll('.biome-choice-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const biomeId = btn.dataset.biome;
+                        currentBiome = BIOMES[biomeId];
+                        initializeGame();
+                        dom.biomeSelectionModal.classList.add('hidden');
+                        dom.gameContainer.classList.remove('hidden');
+                    });
+                });
+            }
+
+            function initializeGame() {
+                gameState = {
+                    money: 100, food: 40, water: 50, biomeHealth: 100,
+                    currentSeasonIndex: 0, year: 1,
+                    plots: Array.from({ length: NUM_PLOTS }, (_, i) => ({ id: i, crop: null, plantedAt: 0, isMature: false, isFertile: false })),
+                    selectedCrop: null, activePractice: null, seasonalEffects: { yieldModifier: 1.0 },
+                };
+                dom.farmGrid.innerHTML = '';
+                dom.cropSelections.innerHTML = '';
+                dom.managementPractices.innerHTML = '';
+
+                gameState.plots.forEach(p => {
+                    const plotEl = document.createElement('div');
+                    plotEl.className = 'plot';
+                    plotEl.dataset.plotId = p.id;
+                    plotEl.addEventListener('click', () => onPlotClick(p.id));
+                    dom.farmGrid.appendChild(plotEl);
+                });
+
+                for (const cropId in currentBiome.crops) {
+                    const crop = currentBiome.crops[cropId];
+                    const button = document.createElement('button');
+                    button.className = 'w-full text-left p-1.5 rounded-md border hover:bg-gray-100 transition-colors flex items-center justify-between text-sm';
+                    button.dataset.cropId = cropId;
+                    button.innerHTML = `<span>${crop.emoji} ${crop.name}</span> <span class="font-semibold">$${crop.cost}</span>`;
+                    button.addEventListener('click', (e) => { e.stopPropagation(); selectCrop(cropId, button); });
+                    dom.cropSelections.appendChild(button);
+                }
+
+                for (const practiceId in MANAGEMENT_PRACTICES) {
+                    const practice = MANAGEMENT_PRACTICES[practiceId];
+                    const button = document.createElement('button');
+                    button.className = 'w-full text-left p-1.5 rounded-md border hover:bg-gray-100 transition-colors';
+                    button.dataset.practiceId = practiceId;
+                    button.innerHTML = `<div class="font-semibold text-sm">${practice.name}</div><div class="text-xs text-gray-500">${practice.description}</div>`;
+                    button.addEventListener('click', (e) => { e.stopPropagation(); selectPractice(practiceId, button); });
+                    dom.managementPractices.appendChild(button);
+                }
+                dom.biomeName.textContent = `Farming the ${currentBiome.name}`;
+                logAdvisor("Let's get started! Plant some crops, then choose a management practice before ending the season.");
+                logEvent(`Your farm in the ${currentBiome.name} has been established.`);
+                updateUI();
+            }
+
+            // --- GAME LOGIC ---
+            function selectCrop(cropId, button) {
+                gameState.selectedCrop = cropId;
+                document.querySelectorAll('#crop-selections button').forEach(btn => btn.classList.remove('bg-green-200', 'border-green-500'));
+                button.classList.add('bg-green-200', 'border-green-500');
+            }
+
+            function selectPractice(practiceId, button) {
+                gameState.activePractice = practiceId;
+                document.querySelectorAll('#management-practices button').forEach(btn => btn.classList.remove('bg-blue-200', 'border-blue-500'));
+                button.classList.add('bg-blue-200', 'border-blue-500');
+            }
+
+            function onPlotClick(plotIndex) {
+                const plot = gameState.plots[plotIndex];
+                if (gameState.selectedCrop && !plot.crop) plantCrop(plotIndex);
+                else if (plot.crop) openPlotModal(plotIndex);
+            }
+
+            function plantCrop(plotIndex) {
+                const cropId = gameState.selectedCrop;
+                if (!cropId) return;
+                const crop = currentBiome.crops[cropId];
+                if (gameState.money < crop.cost) { logEvent(`Not enough money to plant ${crop.name}.`, "error"); return; }
+                
+                gameState.money -= crop.cost;
+                gameState.plots[plotIndex] = { ...gameState.plots[plotIndex], crop: cropId, plantedAt: gameState.currentSeasonIndex + (gameState.year - 1) * 4, isMature: false };
+                logEvent(`Planted ${crop.name} on plot ${plotIndex + 1}.`);
+                gameState.selectedCrop = null;
+                document.querySelectorAll('#crop-selections button').forEach(btn => btn.classList.remove('bg-green-200', 'border-green-500'));
+                updateUI();
+            }
+
+            function advanceSeason() {
+                // 1. Apply Management Practice & Deduct Food
+                applyManagementPractice();
+                const foodDemand = COMMUNITY_SIZE * FOOD_PER_PERSON;
+                gameState.food -= foodDemand;
+
+                // 2. Grow crops
+                gameState.plots.forEach(plot => {
+                    if (plot.crop) {
+                        const crop = currentBiome.crops[plot.crop];
+                        const seasonsGrown = (gameState.currentSeasonIndex + (gameState.year - 1) * 4) - plot.plantedAt;
+                        if (seasonsGrown >= crop.growthTime -1) plot.isMature = true;
+                    }
+                });
+
+                // 3. Advance season & year
+                gameState.currentSeasonIndex++;
+                if (gameState.currentSeasonIndex === 4) {
+                    gameState.currentSeasonIndex = 0;
+                    gameState.year++;
+                }
+                
+                // 4. Trigger seasonal & biome health events
+                const currentSeasonName = SEASONS[gameState.currentSeasonIndex];
+                const potentialEvents = currentBiome.events[currentSeasonName];
+                const event = potentialEvents[Math.floor(Math.random() * potentialEvents.length)];
+                logEvent(event.text, event.type);
+                applyEventEffect(event.effect);
+
+                if (gameState.biomeHealth < 40 && Math.random() < 0.3) {
+                    logEvent("Pest outbreak! Poor biome health has attracted pests, destroying a crop.", "CHALLENGE");
+                    applyEventEffect('crop_loss');
+                }
+
+                // 5. Advisor Message
+                giveAdvice();
+                
+                // 6. Check for End Game
+                if (gameState.year > 3) { endGame(true); return; }
+                if (gameState.money < 0 || gameState.food < 0 && gameState.plots.every(p => !p.isMature)) { endGame(false); return; }
+
+                updateUI();
+                logEvent(`A new season has begun: ${SEASONS[gameState.currentSeasonIndex]}.`);
+                
+                // 7. Reset for next turn
+                gameState.activePractice = null;
+                gameState.seasonalEffects.yieldModifier = 1.0;
+                document.querySelectorAll('#management-practices button').forEach(btn => btn.classList.remove('bg-blue-200', 'border-blue-500'));
+            }
+
+            function applyManagementPractice() {
+                const practiceId = gameState.activePractice;
+                if (!practiceId) { logEvent("No management practice chosen for the season."); return; }
+                const practice = MANAGEMENT_PRACTICES[practiceId];
+
+                if ((practice.cost.money && gameState.money < practice.cost.money) || (practice.cost.water && gameState.water < practice.cost.water) || (practice.cost.food && gameState.food < practice.cost.food)) {
+                    logEvent(`Not enough resources for ${practice.name}.`, 'error'); return;
+                }
+                if (practice.cost.money) gameState.money -= practice.cost.money;
+                if (practice.cost.water) gameState.water -= practice.cost.water;
+                if (practice.cost.food) gameState.food -= practice.cost.food;
+
+                logEvent(`${practice.name} is active.`, 'BOON');
+                gameState.biomeHealth = Math.min(100, gameState.biomeHealth + practice.health_impact);
+
+                switch(practice.effect) {
+                    case 'yield_boost_high': gameState.seasonalEffects.yieldModifier = 1.75; break;
+                    case 'yield_boost_med': gameState.seasonalEffects.yieldModifier = 1.4; break;
+                    case 'conserve_water': gameState.seasonalEffects.conserveWater = true; break;
+                    case 'enrich_soil': gameState.plots.forEach(p => { if (!p.crop) p.isFertile = true; }); break;
+                }
+            }
+            
+            function applyEventEffect(effect) {
+                let waterModifier = gameState.seasonalEffects.conserveWater ? 0.5 : 1;
+                switch(effect) {
+                    case 'water_gain_high': gameState.water += 30; break;
+                    case 'water_gain_med': gameState.water += 20; break;
+                    case 'water_gain_low': gameState.water += 10; break;
+                    case 'water_loss':
+                        let waterLost = Math.floor(25 * waterModifier);
+                        gameState.water -= waterLost;
+                        if (waterModifier < 1) logEvent(`Mulching prevented ${25 - waterLost} water loss!`, 'BOON');
+                        break;
+                    case 'crop_loss':
+                    case 'flood_risk':
+                        const plotsToAffect = gameState.plots.filter(p => p.crop && !p.isMature);
+                        if (plotsToAffect.length > 0 && (effect === 'crop_loss' || (effect === 'flood_risk' && !gameState.seasonalEffects.conserveWater))) {
+                            const plotToLose = plotsToAffect[Math.floor(Math.random() * plotsToAffect.length)];
+                            logEvent(`The harsh weather destroyed the ${currentBiome.crops[plotToLose.crop].name} in plot ${plotToLose.id + 1}!`, 'CHALLENGE');
+                            plotToLose.crop = null;
+                            plotToLose.isMature = false;
+                        } else if(effect === 'flood_risk' && gameState.seasonalEffects.conserveWater) {
+                             logEvent(`Mulching protected your crops from flooding!`, 'BOON');
+                        }
+                        break;
+                }
+                if (gameState.water < 0) gameState.water = 0;
+            }
+            
+            function handleHarvest(plotIndex) {
+                const plot = gameState.plots[plotIndex];
+                const crop = currentBiome.crops[plot.crop];
+                let yieldModifier = gameState.seasonalEffects.yieldModifier;
+                if (plot.isFertile) yieldModifier *= 1.25;
+
+                const moneyGained = Math.floor(crop.yield * yieldModifier);
+                const foodGained = crop.food;
+                gameState.money += moneyGained;
+                gameState.food += foodGained;
+                
+                logEvent(`Harvested ${crop.name} for $${moneyGained} and ${foodGained} food.`, 'BOON');
+                if (plot.isFertile) logEvent(`Fertile soil improved the harvest!`);
+                
+                clearPlot(plotIndex);
+                closeModal();
+            }
+            
+            function clearPlot(plotIndex) {
+                 gameState.plots[plotIndex] = { ...gameState.plots[plotIndex], crop: null, plantedAt: 0, isMature: false, isFertile: false };
+                 updateUI();
+            }
+
+            // --- UI & RENDERING ---
+            function updateUI() {
+                dom.moneyDisplay.textContent = `$${gameState.money}`;
+                dom.foodDisplay.textContent = gameState.food;
+                dom.waterDisplay.textContent = `💧 ${gameState.water}`;
+                dom.goalStatus.textContent = `Year ${gameState.year}, ${SEASONS[gameState.currentSeasonIndex]}`;
+                const foodBalance = gameState.food - (COMMUNITY_SIZE * FOOD_PER_PERSON);
+                dom.foodStatusDisplay.textContent = foodBalance >= 0 ? `Surplus: ${foodBalance}` : `Deficit: ${foodBalance}`;
+                dom.foodStatusDisplay.className = `text-xl font-semibold ${foodBalance >= 0 ? 'text-green-600' : 'text-red-600'}`;
+                dom.healthBarInner.style.width = `${gameState.biomeHealth}%`;
+                dom.healthBarInner.className = `health-bar-inner h-4 rounded-full ${gameState.biomeHealth > 60 ? 'bg-green-600' : gameState.biomeHealth > 30 ? 'bg-yellow-500' : 'bg-red-600'}`;
+
+                const plotElements = document.querySelectorAll('.plot');
+                gameState.plots.forEach((plot, index) => {
+                    const plotEl = plotElements[index];
+                    plotEl.classList.remove('planted', 'fertile');
+                    if (plot.crop) {
+                        const crop = currentBiome.crops[plot.crop];
+                        const seasonsGrown = (gameState.currentSeasonIndex + (gameState.year - 1) * 4) - plot.plantedAt;
+                        let growthPercentage = Math.min(100, (seasonsGrown / crop.growthTime) * 100);
+                        if (plot.isMature) growthPercentage = 100;
+
+                        plotEl.innerHTML = `<div title="${crop.name}">${crop.emoji}</div><div class="growth-bar"><div class="growth-bar-inner" style="width: ${growthPercentage}%"></div></div>`;
+                        plotEl.classList.add('planted');
+                    } else {
+                        plotEl.innerHTML = '';
+                        if (plot.isFertile) plotEl.classList.add('fertile');
+                    }
+                });
+            }
+
+            // --- MODALS & LOGS ---
+            function openPlotModal(plotIndex) {
+                activePlotIndex = plotIndex;
+                const plot = gameState.plots[plotIndex];
+                const crop = currentBiome.crops[plot.crop];
+                let infoText = `This plot has <strong>${crop.name}</strong>.`;
+                dom.harvestBtn.disabled = !plot.isMature;
+                infoText += plot.isMature ? `<br>It's ready to harvest!` : `<br>It's still growing.`;
+                dom.plotInfo.innerHTML = infoText;
+                dom.plotModal.classList.remove('hidden');
+                setTimeout(()=>dom.plotModal.classList.remove('opacity-0'),10);
+            }
+            
+            function closeModal() {
+                dom.plotModal.classList.add('opacity-0');
+                setTimeout(()=>dom.plotModal.classList.add('hidden'),300);
+                activePlotIndex = null;
+            }
+
+            function logEvent(message, type = "NEUTRAL") {
+                const colors = { CHALLENGE: 'text-red-700', error: 'text-red-700', BOON: 'text-green-700', NEUTRAL: 'text-gray-700' };
+                const icons = { CHALLENGE: '❗', error: '❗', BOON: '✨', NEUTRAL: '' };
+                dom.eventLog.innerHTML += `<p class="${colors[type]}">${icons[type]} ${message}</p>`;
+                dom.eventLog.scrollTop = dom.eventLog.scrollHeight;
+            }
+
+            function logAdvisor(message) {
+                dom.advisorLog.innerHTML = `<p>💡 ${message}</p>`;
+            }
+
+            function giveAdvice() {
+                 if (gameState.biomeHealth < 50) {
+                    logAdvisor("Biome health is getting low. Consider using practices like Mulching or Cultural Burning to restore the land.");
+                } else if (SEASONS[gameState.currentSeasonIndex] === 'Summer' && currentBiome.name === 'Temperate Grassland') {
+                    logAdvisor("It's summer! Heatwaves are a risk. Do you have enough water, or a plan to conserve it?");
+                } else if (SEASONS[gameState.currentSeasonIndex] === 'Summer' && currentBiome.name === 'Tropical Savanna') {
+                     logAdvisor("The wet season is here! Mulching can protect your crops from being washed away by heavy rains.");
+                } else {
+                    logAdvisor("A new season begins. Check your resources and plan your next move carefully.");
+                }
+            }
+            
+            function endGame(isWin) {
+                dom.nextSeasonBtn.disabled = true;
+                let message;
+                if (isWin) {
+                    message = `<h2 class="text-3xl font-bold text-green-700 mb-4">Success!</h2>
+                               <p>You successfully supported your community for 3 years! You have achieved food security.</p>`;
+                } else {
+                    message = `<h2 class="text-3xl font-bold text-red-700 mb-4">Challenge Failed</h2>
+                               <p>You ran out of resources and could not support your community. Reflect on what could be done differently.</p>`;
+                }
+                message += `<div class="mt-6 text-left border-t pt-4">
+                                <p><strong>Final Biome Health:</strong> ${gameState.biomeHealth}%</p>
+                                <p><strong>Final Food Units:</strong> ${gameState.food}</p>
+                            </div>
+                            <button id="restart-btn" class="mt-6 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Play Again</button>`;
+
+                dom.endGameContent.innerHTML = message;
+                dom.endGameModal.classList.remove('hidden');
+                setTimeout(()=> dom.endGameModal.classList.remove('opacity-0'),10);
+                document.getElementById('restart-btn').addEventListener('click', () => location.reload());
+            }
+
+            // --- EVENT LISTENERS ---
+            dom.nextSeasonBtn.addEventListener('click', advanceSeason);
+            dom.closeModalBtn.addEventListener('click', closeModal);
+            dom.harvestBtn.addEventListener('click', () => handleHarvest(activePlotIndex));
+            dom.clearPlotBtn.addEventListener('click', () => { clearPlot(activePlotIndex); closeModal(); });
+
+            // --- START GAME ---
+            setupBiomeSelection();
+        });
+    </script>
+</body>
+</html>
+
