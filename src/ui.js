@@ -90,9 +90,13 @@ export function initDOM() {
 
     // Audio Init Binding
     if (dom.muteBtn) {
+        // Initial state
+        dom.muteBtn.setAttribute('aria-pressed', 'false');
+
         dom.muteBtn.addEventListener('click', () => {
             const isMuted = audioManager.toggleMute();
             dom.muteBtn.textContent = isMuted ? "🔇 Sound: Off" : "🔊 Sound: On";
+            dom.muteBtn.setAttribute('aria-pressed', isMuted);
         });
     }
 
@@ -178,6 +182,7 @@ function updateTimeControls() {
     }
 
     if (dom.pauseBtn) {
+        dom.pauseBtn.setAttribute('aria-pressed', gameState.isPaused);
         if (gameState.isPaused) {
             dom.pauseText.textContent = "Resume";
             dom.pauseIcon.textContent = "▶️";
