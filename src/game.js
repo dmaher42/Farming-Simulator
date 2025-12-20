@@ -265,8 +265,15 @@ function plantCrop(plotIndex) {
     if (!cropId) return;
 
     const crop = gameState.currentBiome.crops[cropId];
-    if (gameState.money < crop.cost) {
-        logEvent(`Not enough money to plant ${crop.name}. Need $${crop.cost} but only have $${gameState.money}.`, "error");
+
+    // Seed Drill Upgrade: 20% discount
+    let cost = crop.cost;
+    if (gameState.unlockedUpgrades.includes('seed_drill')) {
+        cost = Math.ceil(cost * 0.8);
+    }
+
+    if (gameState.money < cost) {
+        logEvent(`Not enough money to plant ${crop.name}. Need $${cost} but only have $${gameState.money}.`, "error");
         return;
     }
 
@@ -276,7 +283,7 @@ function plantCrop(plotIndex) {
         logEvent(`Planting ${crop.name} in the same plot again may reduce yield due to soil depletion. Consider crop rotation.`, "CHALLENGE");
     }
 
-    gameState.money -= crop.cost;
+    gameState.money -= cost;
     gameState.plots[plotIndex] = {
         ...gameState.plots[plotIndex],
         crop: cropId,
@@ -449,6 +456,12 @@ function handleHarvest(plotIndex) {
     if (gameState.plots[plotIndex].plantedAt === 0) {
          if (Math.random() > 0.7) knowledgeGain += 1;
     }
+
+    // Agricultural Training Upgrade
+    if (gameState.unlockedUpgrades.includes('ag_training')) {
+        knowledgeGain = Math.ceil(knowledgeGain * 1.5);
+    }
+
     gameState.knowledge += knowledgeGain;
 
     gameState.money += moneyGained;
@@ -554,6 +567,12 @@ export function advanceSeason() {
     updateWeather();
     updateMarketPrices();
 
+    // Passive Water Gain (Rainwater Catchment)
+    if (gameState.unlockedUpgrades.includes('rainwater_catchment')) {
+        gameState.water += 5;
+        logEvent("Rainwater Catchment collected 5 water.", "BOON");
+    }
+
     // 6. Trigger seasonal & biome health events
     const currentSeasonName = SEASONS[gameState.currentSeasonIndex];
     const potentialEvents = gameState.currentBiome.events[currentSeasonName];
@@ -563,8 +582,19 @@ export function advanceSeason() {
 
     // 7. Random events based on biome health
     if (gameState.biomeHealth < 40 && Math.random() < 0.3) {
-        logEvent("Pest outbreak! Poor biome health has attracted pests, destroying a crop.", "CHALLENGE");
-        applyEventEffect('crop_loss');
+        // Integrated Pest Management Upgrade
+        if (gameState.unlockedUpgrades.includes('pest_management')) {
+             if (Math.random() < 0.5) { // 50% chance to completely avoid
+                 logEvent("Integrated Pest Management prevented a pest outbreak.", "BOON");
+             } else {
+                 logEvent("Pest outbreak! But your management systems minimized the damage.", "CHALLENGE");
+                 // No crop loss, just flavor text or minor impact?
+                 // Let's prevent the effect call
+             }
+        } else {
+            logEvent("Pest outbreak! Poor biome health has attracted pests, destroying a crop.", "CHALLENGE");
+            applyEventEffect('crop_loss');
+        }
     }
 
     if (gameState.biomeHealth > 80 && Math.random() < 0.2) {
@@ -604,12 +634,34 @@ export function advanceSeason() {
 }
 
 function updateWeather() {
-    const currentSeason = SEASONS[gameState.currentSeasonIndex];
-    const weatherOptions = gameState.currentBiome.weather[currentSeason];
-    gameState.weather = weatherOptions[Math.floor(Math.random() * weatherOptions.length)];
+    // Determine current weather
+    if (gameState.nextWeather) {
+        gameState.weather = gameState.nextWeather;
+    } else {
+        const currentSeason = SEASONS[gameState.currentSeasonIndex];
+        const weatherOptions = gameState.currentBiome.weather[currentSeason];
+        gameState.weather = weatherOptions[Math.floor(Math.random() * weatherOptions.length)];
+    }
+
+    // Forecast next season's weather
+    const nextSeasonIndex = (gameState.currentSeasonIndex + 1) % 4;
+    const nextSeason = SEASONS[nextSeasonIndex];
+    const nextWeatherOptions = gameState.currentBiome.weather[nextSeason];
+    gameState.nextWeather = nextWeatherOptions[Math.floor(Math.random() * nextWeatherOptions.length)];
 
     dom.weatherText.textContent = gameState.weather;
     dom.weatherIcon.textContent = WEATHER_EMOJIS[gameState.weather] || '🌤️';
+
+    // Update Forecast UI (handled in updateUI generally, but we can update specific element here if it exists)
+    const forecastEl = document.getElementById('weather-forecast');
+    if (forecastEl) {
+        if (gameState.unlockedUpgrades.includes('meteorological_station')) {
+            forecastEl.textContent = `Forecast: ${gameState.nextWeather} ${WEATHER_EMOJIS[gameState.nextWeather]}`;
+            forecastEl.classList.remove('hidden');
+        } else {
+            forecastEl.classList.add('hidden');
+        }
+    }
 }
 
 function applyManagementPractice() {
@@ -673,15 +725,27 @@ function applyEventEffect(effect) {
         waterModifier *= 0.8;
     }
 
+    // Rainwater Catchment Upgrade: Double water gain from events
+    let waterGainMultiplier = 1;
+    if (gameState.unlockedUpgrades.includes('rainwater_catchment')) {
+        waterGainMultiplier = 2;
+    }
+
     switch(effect) {
         case 'water_gain_high':
-            gameState.water += 30;
+            const gainHigh = 30 * waterGainMultiplier;
+            gameState.water += gainHigh;
+            if (waterGainMultiplier > 1) logEvent(`Rainwater Catchment doubled gain to ${gainHigh}!`, "BOON");
             break;
         case 'water_gain_med':
-            gameState.water += 20;
+            const gainMed = 20 * waterGainMultiplier;
+            gameState.water += gainMed;
+            if (waterGainMultiplier > 1) logEvent(`Rainwater Catchment doubled gain to ${gainMed}!`, "BOON");
             break;
         case 'water_gain_low':
-            gameState.water += 10;
+            const gainLow = 10 * waterGainMultiplier;
+            gameState.water += gainLow;
+            if (waterGainMultiplier > 1) logEvent(`Rainwater Catchment doubled gain to ${gainLow}!`, "BOON");
             break;
         case 'water_loss':
             let waterLost = Math.floor(25 * waterModifier);
@@ -695,6 +759,12 @@ function applyEventEffect(effect) {
             break;
         case 'crop_loss':
         case 'flood_risk':
+            // Greenhouse Upgrade Protection
+            if (effect === 'crop_loss' && gameState.unlockedUpgrades.includes('greenhouse')) {
+                logEvent("Greenhouse protected your crops from the extreme weather!", "BOON");
+                return;
+            }
+
             // Filter crops that are NOT pest prone first if trait exists?
             // For now, simpler:
             const plotsToAffect = gameState.plots.filter(p => p.crop && !p.isMature);

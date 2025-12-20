@@ -269,5 +269,47 @@ export const UPGRADES = {
         description: 'Reveals detailed soil stats and prevents yield loss from poor soil match.',
         cost: 25,
         effect: 'soil_insight'
+    },
+    rainwater_catchment: {
+        id: 'rainwater_catchment',
+        name: 'Rainwater Catchment',
+        description: 'Grants +5 water per season passively. Doubles water gain from rain events.',
+        cost: 75,
+        effect: 'water_gain_passive'
+    },
+    seed_drill: {
+        id: 'seed_drill',
+        name: 'Seed Drill',
+        description: 'Reduces the money cost of planting crops by 20%.',
+        cost: 60,
+        effect: 'planting_discount'
+    },
+    greenhouse: {
+        id: 'greenhouse',
+        name: 'Greenhouse',
+        description: 'Protects crops from being destroyed by extreme weather (Frost, Heatwaves).',
+        cost: 100,
+        effect: 'weather_protection'
+    },
+    pest_management: {
+        id: 'pest_management',
+        name: 'Integrated Pest Management',
+        description: 'Reduces risk of pest outbreaks and prevents yield loss from pests.',
+        cost: 50,
+        effect: 'pest_resistance'
+    },
+    ag_training: {
+        id: 'ag_training',
+        name: 'Agricultural Training',
+        description: 'Harvesting crops grants +50% more Knowledge.',
+        cost: 80,
+        effect: 'knowledge_boost'
+    },
+    meteorological_station: {
+        id: 'meteorological_station',
+        name: 'Adv. Met Station',
+        description: 'Forecasts the weather pattern for the upcoming season.',
+        cost: 45,
+        effect: 'weather_forecast'
     }
 };

@@ -22,6 +22,7 @@ export const gameState = {
     activePractice: null,
     seasonalEffects: { yieldModifier: 1.0, conserveWater: false },
     weather: 'Mild',
+    nextWeather: null, // For forecasting
     currentBiome: null,
 
     // New features state
@@ -64,6 +65,7 @@ export function resetGameState(biome) {
     gameState.activePractice = null;
     gameState.seasonalEffects = { yieldModifier: 1.0, conserveWater: false };
     gameState.weather = 'Mild';
+    gameState.nextWeather = null;
     gameState.currentBiome = biome;
     gameState.knowledge = 0;
     gameState.unlockedUpgrades = [];
