@@ -19,10 +19,54 @@ export const BIOMES = {
         description: "Mild climate with balanced seasons. Good for traditional grain crops.",
         location: "(e.g., South Australia)",
         crops: {
-            wheat: { name: 'Wheat', emoji: '🌾', cost: 10, yield: 25, food: 5, growthTime: 1, waterNeed: 15, idealSeasons: ['Spring', 'Autumn'] },
-            canola: { name: 'Canola', emoji: '🌻', cost: 15, yield: 40, food: 3, growthTime: 1, waterNeed: 20, idealSeasons: ['Spring'] },
-            barley: { name: 'Barley', emoji: '🍺', cost: 8, yield: 20, food: 4, growthTime: 1, waterNeed: 10, idealSeasons: ['Autumn', 'Winter'] },
-            lentils: { name: 'Lentils', emoji: '🌱', cost: 20, yield: 50, food: 8, growthTime: 2, waterNeed: 25, idealSeasons: ['Spring'] },
+            wheat: {
+                name: 'Wheat',
+                emoji: '🌾',
+                cost: 10,
+                baseYield: 5,
+                basePrice: 5, // 5 * 5 = 25 (Similar to old yield)
+                food: 5,
+                growthTime: 1,
+                waterNeed: 15,
+                idealSeasons: ['Spring', 'Autumn'],
+                traits: ['heavy_feeder']
+            },
+            canola: {
+                name: 'Canola',
+                emoji: '🌻',
+                cost: 15,
+                baseYield: 4,
+                basePrice: 10, // 4 * 10 = 40
+                food: 3,
+                growthTime: 1,
+                waterNeed: 20,
+                idealSeasons: ['Spring'],
+                traits: ['pest_prone']
+            },
+            barley: {
+                name: 'Barley',
+                emoji: '🍺',
+                cost: 8,
+                baseYield: 5,
+                basePrice: 4, // 5 * 4 = 20
+                food: 4,
+                growthTime: 1,
+                waterNeed: 10,
+                idealSeasons: ['Autumn', 'Winter'],
+                traits: ['hardy']
+            },
+            lentils: {
+                name: 'Lentils',
+                emoji: '🌱',
+                cost: 20,
+                baseYield: 5,
+                basePrice: 10, // 5 * 10 = 50
+                food: 8,
+                growthTime: 2,
+                waterNeed: 25,
+                idealSeasons: ['Spring'],
+                traits: ['nitrogen_fixer']
+            },
         },
         events: {
             Spring: [
@@ -57,10 +101,54 @@ export const BIOMES = {
         description: "Distinct wet and dry seasons. Supports resilient, unique crops.",
         location: "(e.g., Northern Territory)",
         crops: {
-            sorghum: { name: 'Sorghum', emoji: '🌽', cost: 12, yield: 30, food: 6, growthTime: 1, waterNeed: 15, idealSeasons: ['Summer'] },
-            mango: { name: 'Mangoes', emoji: '🥭', cost: 25, yield: 60, food: 4, growthTime: 2, waterNeed: 30, idealSeasons: ['Summer', 'Autumn'] },
-            peanut: { name: 'Peanuts', emoji: '🥜', cost: 10, yield: 25, food: 3, growthTime: 1, waterNeed: 12, idealSeasons: ['Summer'] },
-            millet: { name: 'Millet', emoji: '🌾', cost: 8, yield: 22, food: 5, growthTime: 1, waterNeed: 10, idealSeasons: ['Autumn'] },
+            sorghum: {
+                name: 'Sorghum',
+                emoji: '🌽',
+                cost: 12,
+                baseYield: 6,
+                basePrice: 5, // 30 total
+                food: 6,
+                growthTime: 1,
+                waterNeed: 15,
+                idealSeasons: ['Summer'],
+                traits: ['drought_resistant']
+            },
+            mango: {
+                name: 'Mangoes',
+                emoji: '🥭',
+                cost: 25,
+                baseYield: 6,
+                basePrice: 10, // 60 total
+                food: 4,
+                growthTime: 2,
+                waterNeed: 30,
+                idealSeasons: ['Summer', 'Autumn'],
+                traits: ['standard']
+            },
+            peanut: {
+                name: 'Peanuts',
+                emoji: '🥜',
+                cost: 10,
+                baseYield: 5,
+                basePrice: 5, // 25 total
+                food: 3,
+                growthTime: 1,
+                waterNeed: 12,
+                idealSeasons: ['Summer'],
+                traits: ['nitrogen_fixer']
+            },
+            millet: {
+                name: 'Millet',
+                emoji: '🌾',
+                cost: 8,
+                baseYield: 4,
+                basePrice: 6, // 24 total
+                food: 5,
+                growthTime: 1,
+                waterNeed: 10,
+                idealSeasons: ['Autumn'],
+                traits: ['drought_resistant', 'hardy']
+            },
         },
         events: {
             Spring: [

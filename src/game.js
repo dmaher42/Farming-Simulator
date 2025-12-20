@@ -1,9 +1,11 @@
-import { gameState, resetGameState } from './state.js';
+import { gameState, resetGameState, saveGame } from './state.js';
 import { dom, updateUI, logEvent, logAdvisor } from './ui.js';
 import { SEASONS, WEATHER_EMOJIS, COMMUNITY_SIZE, FOOD_PER_PERSON, MANAGEMENT_PRACTICES, UPGRADES } from './data.js';
+import { initializeMarket, updateMarketPrices, getCropPrice } from './market.js';
 
 export function initializeGame(biome) {
     resetGameState(biome);
+    initializeMarket();
 
     dom.farmGrid.innerHTML = '';
     dom.cropSelections.innerHTML = '';
@@ -118,7 +120,7 @@ export function selectPractice(practiceId, button) {
     logAdvisor(`Selected ${practice.name}. ${getPracticeAdvice(practice)}`);
 }
 
-function onPlotClick(plotIndex) {
+export function handlePlotClick(plotIndex) {
     const plot = gameState.plots[plotIndex];
     if (gameState.selectedCrop && !plot.crop) {
         plantCrop(plotIndex);
@@ -127,6 +129,10 @@ function onPlotClick(plotIndex) {
     } else if (!plot.crop) {
         logAdvisor("Select a crop to plant on this empty plot, or consider using a management practice to improve soil quality.");
     }
+}
+
+function onPlotClick(plotIndex) {
+    handlePlotClick(plotIndex);
 }
 
 function plantCrop(plotIndex) {
@@ -176,6 +182,10 @@ export function openPlotModal(plotIndex) {
 
     let extraInfo = '';
 
+    // Calculate current market value
+    const currentPrice = getCropPrice(plot.crop);
+    const estimatedValue = (crop.baseYield * currentPrice).toFixed(0);
+
     // Soil Testing Kit Upgrade
     if (gameState.unlockedUpgrades.includes('soil_testing')) {
         let matchQuality = 'Neutral';
@@ -198,6 +208,17 @@ export function openPlotModal(plotIndex) {
                     <div class="text-right ${matchColor}">${matchQuality}</div>
                     <div>Soil Nutrients:</div>
                     <div class="text-right">${gameState.soilQuality}%</div>
+                    <div>Est. Value:</div>
+                    <div class="text-right font-bold text-green-700">$${estimatedValue}</div>
+                </div>
+            </div>
+        `;
+    } else {
+        extraInfo = `
+            <div class="col-span-2 border-t mt-2 pt-2">
+                <div class="grid grid-cols-2">
+                     <div>Est. Value:</div>
+                    <div class="text-right font-bold text-green-700">$${estimatedValue}</div>
                 </div>
             </div>
         `;
@@ -218,9 +239,6 @@ export function openPlotModal(plotIndex) {
     `;
 
     dom.harvestBtn.disabled = !plot.isMature;
-    // Store the active plot index in a data attribute or similar way if needed,
-    // but here we might need to rely on a module-level variable or pass it to handlers.
-    // We'll use a closure-like approach by updating the onclick handlers.
 
     dom.harvestBtn.onclick = () => handleHarvest(plotIndex);
     dom.waterPlotBtn.onclick = () => waterPlot(plotIndex);
@@ -251,6 +269,10 @@ function handleHarvest(plotIndex) {
     if (plot.moisture < 20) yieldModifier *= 0.7; // Drought reduces yield
     if (plot.lastCrop === plot.crop) yieldModifier *= 0.8; // Same crop penalty
 
+    // Soil Quality Impact
+    if (gameState.soilQuality < 40) yieldModifier *= 0.8;
+    if (gameState.soilQuality > 80) yieldModifier *= 1.1;
+
     // Check if current season is ideal for this crop
     const currentSeason = SEASONS[gameState.currentSeasonIndex];
     if (crop.idealSeasons.includes(currentSeason)) {
@@ -269,14 +291,30 @@ function handleHarvest(plotIndex) {
         yieldModifier *= 1.15;
     }
 
-    const moneyGained = Math.floor(crop.yield * yieldModifier * sellPriceMultiplier);
+    // Calculate Yield Amount
+    const yieldAmount = Math.floor(crop.baseYield * yieldModifier);
+
+    // Calculate Price
+    const pricePerUnit = getCropPrice(plot.crop);
+
+    const moneyGained = Math.floor(yieldAmount * pricePerUnit * sellPriceMultiplier);
     const foodGained = crop.food;
+
+    // Trait Effects
+    if (crop.traits) {
+        if (crop.traits.includes('nitrogen_fixer')) {
+            gameState.soilQuality = Math.min(100, gameState.soilQuality + 5);
+            logEvent("Legumes improved the soil quality!", "BOON");
+        }
+        if (crop.traits.includes('heavy_feeder')) {
+            gameState.soilQuality = Math.max(0, gameState.soilQuality - 5);
+        }
+    }
 
     // Gain Knowledge
     let knowledgeGain = 1;
-    if (gameState.plots[plotIndex].plantedAt === 0) { // First harvest ever? No, plantedAt is reset.
-        // Simple logic for now: small chance for bonus
-        if (Math.random() > 0.7) knowledgeGain += 1;
+    if (gameState.plots[plotIndex].plantedAt === 0) {
+         if (Math.random() > 0.7) knowledgeGain += 1;
     }
     gameState.knowledge += knowledgeGain;
 
@@ -288,7 +326,7 @@ function handleHarvest(plotIndex) {
     plotEl.classList.add('pulse');
     setTimeout(() => plotEl.classList.remove('pulse'), 500);
 
-    logEvent(`Harvested ${crop.name} for $${moneyGained}, ${foodGained} food, and ${knowledgeGain} Knowledge.`, 'BOON');
+    logEvent(`Harvested ${crop.name}. Sold ${yieldAmount} units @ $${pricePerUnit.toFixed(1)}/unit for $${moneyGained}.`, 'BOON');
 
     if (plot.isFertile) {
         logEvent(`Fertile soil improved the harvest!`);
@@ -364,7 +402,12 @@ export function advanceSeason() {
 
             // If moisture is too low, crop growth is stunted
             if (plot.moisture < 20) {
-                logEvent(`Crop in plot ${plot.id + 1} is suffering from drought conditions.`, "CHALLENGE");
+                const crop = gameState.currentBiome.crops[plot.crop];
+                if (crop.traits && crop.traits.includes('drought_resistant')) {
+                    // Less damage
+                } else {
+                    logEvent(`Crop in plot ${plot.id + 1} is suffering from drought conditions.`, "CHALLENGE");
+                }
             }
         }
     });
@@ -376,10 +419,11 @@ export function advanceSeason() {
             const seasonsGrown = (gameState.currentSeasonIndex + (gameState.year - 1) * 4) - plot.plantedAt;
 
             // Growth is slower if moisture is low
-            const growthRate = plot.moisture > 30 ? 1 : 0.5;
+            let growthRate = plot.moisture > 30 ? 1 : 0.5;
 
-            // Hybrid Seeds Upgrade
-            // We can't easily change growth time, but we can ensure they are resilient
+            if (crop.traits && crop.traits.includes('drought_resistant') && plot.moisture <= 30) {
+                growthRate = 0.8; // Resistant crops grow better in drought
+            }
 
             if (seasonsGrown >= (crop.growthTime - 1) * growthRate) {
                 plot.isMature = true;
@@ -394,8 +438,9 @@ export function advanceSeason() {
         gameState.year++;
     }
 
-    // 5. Update weather
+    // 5. Update weather and Market
     updateWeather();
+    updateMarketPrices();
 
     // 6. Trigger seasonal & biome health events
     const currentSeasonName = SEASONS[gameState.currentSeasonIndex];
@@ -417,6 +462,9 @@ export function advanceSeason() {
 
     // 7b. Quest Management
     manageQuests();
+
+    // 7c. Auto-save
+    saveGame();
 
     // 8. Advisor Message
     giveAdvice();
@@ -534,6 +582,8 @@ function applyEventEffect(effect) {
             break;
         case 'crop_loss':
         case 'flood_risk':
+            // Filter crops that are NOT pest prone first if trait exists?
+            // For now, simpler:
             const plotsToAffect = gameState.plots.filter(p => p.crop && !p.isMature);
             if (plotsToAffect.length > 0 && (effect === 'crop_loss' || (effect === 'flood_risk' && !gameState.seasonalEffects.conserveWater))) {
                 const plotToLose = plotsToAffect[Math.floor(Math.random() * plotsToAffect.length)];
@@ -579,9 +629,6 @@ function spawnQuest() {
     const randomCropId = crops[Math.floor(Math.random() * crops.length)];
     const crop = gameState.currentBiome.crops[randomCropId];
 
-    // Check if it's feasible to grow (in season or coming up)
-    // For simplicity, just pick a random one for now, adds challenge
-
     const targetAmount = Math.floor(Math.random() * 3) + 3; // 3 to 5 crops
     const reward = Math.floor(crop.cost * targetAmount * 1.5) + 20;
     const duration = 3; // Seasons to complete
@@ -598,7 +645,7 @@ function spawnQuest() {
     logEvent(`New Community Request: Harvest ${targetAmount} ${crop.name}!`, "NEUTRAL");
 }
 
-function getCropAdvice(crop) {
+export function getCropAdvice(crop) {
     const currentSeason = SEASONS[gameState.currentSeasonIndex];
     if (crop.idealSeasons.includes(currentSeason)) {
         return `This crop grows well in ${currentSeason}. Ideal conditions for planting!`;
@@ -607,7 +654,7 @@ function getCropAdvice(crop) {
     }
 }
 
-function getPracticeAdvice(practice) {
+export function getPracticeAdvice(practice) {
     if (practice.health_impact > 0) {
         return `This practice will improve your biome health by ${practice.health_impact}%.`;
     } else {
