@@ -183,11 +183,13 @@ function renderPlots() {
         plotEl.className = 'plot'; // Reset classes
         plotEl.innerHTML = ''; // Clear content
 
-        // Moisture indicator
-        const moistureIndicator = document.createElement('div');
-        moistureIndicator.className = 'moisture-indicator';
-        moistureIndicator.style.opacity = plot.moisture > 30 ? '1' : '0.3';
-        plotEl.appendChild(moistureIndicator);
+        // Set soil background based on moisture and state
+        let soilBg = 'assets/soil.svg';
+        if (plot.moisture > 60) soilBg = 'assets/soil_wet.svg';
+        else if (plot.moisture < 20) soilBg = 'assets/soil_dry.svg';
+
+        plotEl.style.backgroundImage = `url('${soilBg}')`;
+        plotEl.style.backgroundSize = 'cover';
 
         if (plot.crop) {
             const crop = gameState.currentBiome.crops[plot.crop];
@@ -197,23 +199,24 @@ function renderPlots() {
 
             // Visual Growth Stages
             let cropContent = document.createElement('div');
-            cropContent.className = 'flex flex-col items-center justify-center h-full w-full relative z-10';
+            cropContent.className = 'crop-visual-container';
 
-            let iconSize = 'text-xl';
-            let icon = '🌱'; // Default Sprout
+            let assetName = 'sprout.svg';
 
-            if (growthPercentage < 50) {
-                icon = '🌱';
-                iconSize = 'text-lg';
+            if (growthPercentage < 40) {
+                assetName = 'sprout.svg';
             } else if (growthPercentage < 100) {
-                icon = '🌿';
-                iconSize = 'text-2xl';
+                assetName = 'sapling.svg';
             } else {
-                icon = crop.emoji;
-                iconSize = 'text-4xl';
+                assetName = crop.asset || 'sprout.svg';
             }
 
-            cropContent.innerHTML = `<div class="${iconSize} transition-all duration-500">${icon}</div>`;
+            const img = document.createElement('img');
+            img.src = `assets/${assetName}`;
+            img.className = 'crop-img';
+            img.alt = crop.name;
+
+            cropContent.appendChild(img);
 
             plotEl.appendChild(cropContent);
             plotEl.classList.add('planted');
@@ -226,7 +229,7 @@ function renderPlots() {
                 plotEl.appendChild(bar);
             } else {
                 // Mature glow
-                plotEl.classList.add('ring-2', 'ring-yellow-400');
+                plotEl.classList.add('mature-glow');
             }
 
         } else {

@@ -22,6 +22,7 @@ export const BIOMES = {
             wheat: {
                 name: 'Wheat',
                 emoji: '🌾',
+                asset: 'wheat.svg',
                 cost: 10,
                 baseYield: 5,
                 basePrice: 5, // 5 * 5 = 25 (Similar to old yield)
@@ -34,6 +35,7 @@ export const BIOMES = {
             canola: {
                 name: 'Canola',
                 emoji: '🌻',
+                asset: 'sunflower.svg',
                 cost: 15,
                 baseYield: 4,
                 basePrice: 10, // 4 * 10 = 40
@@ -46,6 +48,7 @@ export const BIOMES = {
             barley: {
                 name: 'Barley',
                 emoji: '🍺',
+                asset: 'barley.svg',
                 cost: 8,
                 baseYield: 5,
                 basePrice: 4, // 5 * 4 = 20
@@ -58,6 +61,7 @@ export const BIOMES = {
             lentils: {
                 name: 'Lentils',
                 emoji: '🌱',
+                asset: 'lentil.svg',
                 cost: 20,
                 baseYield: 5,
                 basePrice: 10, // 5 * 10 = 50
@@ -104,6 +108,7 @@ export const BIOMES = {
             sorghum: {
                 name: 'Sorghum',
                 emoji: '🌽',
+                asset: 'corn.svg',
                 cost: 12,
                 baseYield: 6,
                 basePrice: 5, // 30 total
@@ -116,6 +121,7 @@ export const BIOMES = {
             mango: {
                 name: 'Mangoes',
                 emoji: '🥭',
+                asset: 'mango.svg',
                 cost: 25,
                 baseYield: 6,
                 basePrice: 10, // 60 total
@@ -128,6 +134,7 @@ export const BIOMES = {
             peanut: {
                 name: 'Peanuts',
                 emoji: '🥜',
+                asset: 'peanut.svg',
                 cost: 10,
                 baseYield: 5,
                 basePrice: 5, // 25 total
@@ -140,6 +147,7 @@ export const BIOMES = {
             millet: {
                 name: 'Millet',
                 emoji: '🌾',
+                asset: 'millet.svg',
                 cost: 8,
                 baseYield: 4,
                 basePrice: 6, // 24 total
