@@ -40,7 +40,8 @@ export const gameState = {
     isPaused: false,
     speed: 1, // Multiplier
     activeNPC: null,
-    wantsTutorial: false
+    wantsTutorial: false,
+    playerPosition: 0 // Index 0-39
 };
 
 export function resetGameState(biome) {
@@ -76,6 +77,7 @@ export function resetGameState(biome) {
     gameState.speed = 1;
     gameState.activeNPC = null;
     gameState.wantsTutorial = false;
+    gameState.playerPosition = 0;
 }
 
 export function saveGame() {

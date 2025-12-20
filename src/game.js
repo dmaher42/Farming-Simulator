@@ -132,7 +132,68 @@ export function initializeGame(biome) {
         tutorialManager.start();
     }
 
+    setupInputHandlers();
     startGameLoop();
+}
+
+function setupInputHandlers() {
+    window.addEventListener('keydown', (e) => {
+        // Ignore input if a modal is open (except maybe Escape to close, but that's handled elsewhere)
+        if (!dom.plotModal.classList.contains('hidden') ||
+            !dom.biomeSelectionModal.classList.contains('hidden') ||
+            !dom.marketModal.classList.contains('hidden') ||
+            !dom.researchModal.classList.contains('hidden') ||
+            !dom.endGameModal.classList.contains('hidden') ||
+            !dom.guideModal.classList.contains('hidden')) {
+            return;
+        }
+
+        const cols = 8;
+        const rows = 5;
+        const maxPlots = cols * rows;
+        let newPos = gameState.playerPosition;
+
+        switch(e.key) {
+            case 'ArrowUp':
+            case 'w':
+            case 'W':
+                if (newPos >= cols) newPos -= cols;
+                break;
+            case 'ArrowDown':
+            case 's':
+            case 'S':
+                if (newPos < maxPlots - cols) newPos += cols;
+                break;
+            case 'ArrowLeft':
+            case 'a':
+            case 'A':
+                if (newPos % cols !== 0) newPos -= 1;
+                break;
+            case 'ArrowRight':
+            case 'd':
+            case 'D':
+                if ((newPos + 1) % cols !== 0) newPos += 1;
+                break;
+            case ' ':
+            case 'Enter':
+                e.preventDefault();
+                handlePlotClick(gameState.playerPosition);
+                return; // No movement
+            default:
+                return; // Ignore other keys
+        }
+
+        if (newPos !== gameState.playerPosition) {
+            gameState.playerPosition = newPos;
+            updateUI(); // Or call updatePlayerVisuals() directly for performance?
+                        // updateUI calls renderPlots which wipes grid, so we must rely on updateUI calling updatePlayerVisuals
+                        // or just move the element. For now, full updateUI is safer but slower.
+                        // Let's rely on updateUI which calls updatePlayerVisuals.
+
+            // Play step sound?
+            // audioManager.playStep();
+        }
+    });
 }
 
 function startGameLoop() {

@@ -174,6 +174,26 @@ export function updateUI() {
 
     // Update plots
     renderPlots();
+    updatePlayerVisuals();
+}
+
+export function updatePlayerVisuals() {
+    // Remove existing player element
+    const existingPlayer = document.getElementById('player-character');
+    if (existingPlayer) existingPlayer.remove();
+
+    const plotIndex = gameState.playerPosition;
+    const plots = document.querySelectorAll('.plot');
+    if (plots[plotIndex]) {
+        const playerEl = document.createElement('div');
+        playerEl.id = 'player-character';
+        playerEl.className = 'player-character';
+        playerEl.innerHTML = '🧑‍🌾';
+        plots[plotIndex].appendChild(playerEl);
+
+        // Ensure scroll into view if we ever have a scrollable grid (not currently the case but good practice)
+        // plots[plotIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 function updateTimeControls() {
