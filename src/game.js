@@ -35,10 +35,13 @@ export function initializeGame(biome) {
         button.dataset.cropId = cropId;
 
         const idealSeasonsText = crop.idealSeasons.map(s => s.substring(0, 3)).join(', ');
+        const iconSrc = `assets/${crop.asset || 'sprout.svg'}`;
 
         button.innerHTML = `
             <div class="flex items-center">
-                <span class="text-2xl mr-3">${crop.emoji}</span>
+                <div class="mr-3 w-8 h-8 flex items-center justify-center">
+                    <img src="${iconSrc}" alt="${crop.name}" class="max-w-full max-h-full">
+                </div>
                 <div>
                     <div class="font-semibold">${crop.name}</div>
                     <div class="text-xs text-gray-500">Ideal: ${idealSeasonsText}</div>
