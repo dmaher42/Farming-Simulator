@@ -146,6 +146,8 @@ function updateQuestUI() {
 function updateWeatherEffects() {
     // Simple CSS based weather effects using gradients or colors
     const overlay = dom.weatherEffectOverlay;
+    if (!overlay) return;
+
     overlay.className = 'absolute inset-0 pointer-events-none z-0 transition-opacity duration-1000';
 
     // Reset styles
@@ -157,7 +159,6 @@ function updateWeatherEffects() {
     if (weather.includes('rain') || weather.includes('wet') || weather.includes('storm')) {
         overlay.style.backgroundImage = 'linear-gradient(to bottom, transparent, rgba(0,0,100,0.1))';
         overlay.style.opacity = '1';
-        // Ideally we would add animation classes here
     } else if (weather.includes('hot') || weather.includes('sunny') || weather.includes('dry')) {
         overlay.style.backgroundImage = 'radial-gradient(circle at top right, rgba(255,200,0,0.2), transparent)';
         overlay.style.opacity = '1';
@@ -172,15 +173,21 @@ function updateWeatherEffects() {
 
 function renderPlots() {
     const plotElements = document.querySelectorAll('.plot');
+    // Ensure we match plots by ID or Index.
+    // gameState.plots array index corresponds to DOM order if initialized correctly.
+
     gameState.plots.forEach((plot, index) => {
         const plotEl = plotElements[index];
-        plotEl.className = 'plot'; // Reset classes
+        if (!plotEl) return;
 
-        // Update moisture indicator
-        const moistureIndicator = plotEl.querySelector('.moisture-indicator');
-        if (moistureIndicator) {
-            moistureIndicator.style.opacity = plot.moisture > 30 ? '1' : '0.3';
-        }
+        plotEl.className = 'plot'; // Reset classes
+        plotEl.innerHTML = ''; // Clear content
+
+        // Moisture indicator
+        const moistureIndicator = document.createElement('div');
+        moistureIndicator.className = 'moisture-indicator';
+        moistureIndicator.style.opacity = plot.moisture > 30 ? '1' : '0.3';
+        plotEl.appendChild(moistureIndicator);
 
         if (plot.crop) {
             const crop = gameState.currentBiome.crops[plot.crop];
@@ -188,17 +195,49 @@ function renderPlots() {
             let growthPercentage = Math.min(100, (seasonsGrown / crop.growthTime) * 100);
             if (plot.isMature) growthPercentage = 100;
 
-            plotEl.innerHTML = `
-                <div title="${crop.name}">${crop.emoji}</div>
-                <div class="growth-bar"><div class="growth-bar-inner" style="width: ${growthPercentage}%"></div></div>
-                <div class="moisture-indicator" style="opacity: ${plot.moisture > 30 ? '1' : '0.3'}"></div>
-            `;
+            // Visual Growth Stages
+            let cropContent = document.createElement('div');
+            cropContent.className = 'flex flex-col items-center justify-center h-full w-full relative z-10';
+
+            let iconSize = 'text-xl';
+            let icon = '🌱'; // Default Sprout
+
+            if (growthPercentage < 50) {
+                icon = '🌱';
+                iconSize = 'text-lg';
+            } else if (growthPercentage < 100) {
+                icon = '🌿';
+                iconSize = 'text-2xl';
+            } else {
+                icon = crop.emoji;
+                iconSize = 'text-4xl';
+            }
+
+            cropContent.innerHTML = `<div class="${iconSize} transition-all duration-500">${icon}</div>`;
+
+            plotEl.appendChild(cropContent);
             plotEl.classList.add('planted');
+
+            // Add growth bar only if growing
+            if (!plot.isMature) {
+                const bar = document.createElement('div');
+                bar.className = 'growth-bar';
+                bar.innerHTML = `<div class="growth-bar-inner" style="width: ${growthPercentage}%"></div>`;
+                plotEl.appendChild(bar);
+            } else {
+                // Mature glow
+                plotEl.classList.add('ring-2', 'ring-yellow-400');
+            }
+
         } else {
-            plotEl.innerHTML = `
-                <div class="moisture-indicator" style="opacity: ${plot.moisture > 30 ? '1' : '0.3'}"></div>
-            `;
-            if (plot.isFertile) plotEl.classList.add('fertile');
+            if (plot.isFertile) {
+                plotEl.classList.add('fertile');
+                // Maybe a small sparkle icon for fertile?
+                const fertileIcon = document.createElement('div');
+                fertileIcon.className = 'absolute top-1 left-1 text-xs opacity-50';
+                fertileIcon.textContent = '✨';
+                plotEl.appendChild(fertileIcon);
+            }
         }
     });
 }
