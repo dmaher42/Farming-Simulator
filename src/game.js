@@ -41,25 +41,25 @@ export function initializeGame(biome) {
     for (const cropId in biome.crops) {
         const crop = biome.crops[cropId];
         const button = document.createElement('button');
-        button.className = 'crop-card w-full text-left p-3 rounded-md border hover:bg-gray-50 transition-colors flex items-center justify-between';
+        button.className = 'crop-card w-full text-left p-2 rounded-xl border border-soil-200 bg-white hover:border-nature-400 hover:shadow-md transition-all flex items-center justify-between group active:scale-95';
         button.dataset.cropId = cropId;
 
         const idealSeasonsText = crop.idealSeasons.map(s => s.substring(0, 3)).join(', ');
         const iconSrc = `assets/${crop.asset || 'sprout.svg'}`;
 
         button.innerHTML = `
-            <div class="flex items-center">
-                <div class="mr-3 w-8 h-8 flex items-center justify-center">
-                    <img src="${iconSrc}" alt="${crop.name}" class="max-w-full max-h-full">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-soil-100 rounded-lg flex items-center justify-center p-1 group-hover:bg-nature-100 transition-colors">
+                    <img src="${iconSrc}" alt="${crop.name}" class="w-full h-full object-contain filter drop-shadow-sm">
                 </div>
                 <div>
-                    <div class="font-semibold">${crop.name}</div>
-                    <div class="text-xs text-gray-500">Ideal: ${idealSeasonsText}</div>
+                    <div class="font-bold text-soil-800 text-sm leading-tight">${crop.name}</div>
+                    <div class="text-[10px] text-soil-500 font-medium">Seasons: ${idealSeasonsText}</div>
                 </div>
             </div>
             <div class="text-right">
-                <div class="font-semibold">$${crop.cost}</div>
-                <div class="text-xs text-gray-500">Water: ${crop.waterNeed}</div>
+                <div class="font-bold text-nature-700 text-sm">$${crop.cost}</div>
+                <div class="text-[10px] text-blue-500 font-bold">💧${crop.waterNeed}</div>
             </div>
         `;
 
@@ -75,7 +75,7 @@ export function initializeGame(biome) {
     for (const practiceId in MANAGEMENT_PRACTICES) {
         const practice = MANAGEMENT_PRACTICES[practiceId];
         const button = document.createElement('button');
-        button.className = 'practice-card w-full text-left p-3 rounded-md border hover:bg-gray-50 transition-colors';
+        button.className = 'practice-card w-full text-left p-3 rounded-xl border border-soil-200 bg-white hover:border-blue-400 hover:shadow-md transition-all group active:scale-95';
         button.dataset.practiceId = practiceId;
 
         // Format cost text
@@ -90,9 +90,11 @@ export function initializeGame(biome) {
         }
 
         button.innerHTML = `
-            <div class="font-semibold text-sm">${practice.name}</div>
-            <div class="text-xs text-gray-500 mt-1">${practice.description}</div>
-            <div class="text-xs font-semibold mt-2">Cost: ${costText}</div>
+            <div class="flex justify-between items-center mb-1">
+                <div class="font-bold text-soil-800 text-sm">${practice.name}</div>
+                <div class="text-[10px] font-bold bg-soil-100 px-2 py-0.5 rounded text-soil-600">Cost: ${costText}</div>
+            </div>
+            <div class="text-xs text-soil-500 leading-snug">${practice.description}</div>
         `;
 
         button.addEventListener('click', (e) => {
