@@ -12,12 +12,32 @@ const MARKET_EVENTS = [
 
 export function initializeMarket() {
     gameState.market = {
-        prices: {}
+        prices: {},
+        history: {}
     };
+
+    // Pre-populate some history for the chart
+    const biomeCrops = gameState.currentBiome.crops;
+    for (const cropId in biomeCrops) {
+        gameState.market.history[cropId] = [];
+        const basePrice = biomeCrops[cropId].basePrice;
+
+        // Generate 5 past seasons
+        for (let i = 0; i < 5; i++) {
+            const randomFluctuation = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
+            const price = parseFloat((basePrice * randomFluctuation).toFixed(2));
+            gameState.market.history[cropId].push(price);
+        }
+    }
+
     updateMarketPrices();
 }
 
 export function updateMarketPrices() {
+    if (!gameState.market.history) {
+        gameState.market.history = {};
+    }
+
     // 1. Determine Global Market Trend
     // 20% chance of a significant event, otherwise minor fluctuations
     let marketEvent = MARKET_EVENTS[4]; // Default stable
@@ -44,6 +64,17 @@ export function updateMarketPrices() {
 
         // Round to 2 decimals
         gameState.market.prices[cropId] = parseFloat(newPrice.toFixed(2));
+
+        // Update History
+        if (!gameState.market.history[cropId]) {
+            gameState.market.history[cropId] = [];
+        }
+        gameState.market.history[cropId].push(gameState.market.prices[cropId]);
+
+        // Limit history to last 12 seasons (3 years)
+        if (gameState.market.history[cropId].length > 12) {
+            gameState.market.history[cropId].shift();
+        }
     }
 }
 
