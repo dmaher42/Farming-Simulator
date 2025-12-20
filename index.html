@@ -181,6 +181,42 @@
             font-size: 2rem;
             text-align: center;
         }
+        .time-control-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 8px 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .season-progress-container {
+            flex-grow: 1;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .season-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4299e1, #48bb78);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        .control-btn {
+            background: #4a5568;
+            color: white;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .control-btn:hover { background: #2d3748; }
     </style>
 </head>
 <body class="p-4">
@@ -302,6 +338,20 @@
                         <div class="text-lg font-semibold" id="next-season">Summer</div>
                     </div>
                 </div>
+
+                <!-- Time Controls -->
+                <div class="mt-4 time-control-panel">
+                    <button id="pause-btn" class="control-btn w-24">
+                        <span id="pause-icon" class="mr-1">⏸️</span>
+                        <span id="pause-text">Pause</span>
+                    </button>
+                    <div class="season-progress-container">
+                        <div id="season-progress" class="season-progress-bar"></div>
+                    </div>
+                    <button id="sleep-btn" class="control-btn w-24 bg-indigo-600 hover:bg-indigo-700">
+                        <span class="mr-1">💤</span> Sleep
+                    </button>
+                </div>
             </header>
             
             <main id="farm-grid" class="farm-grid shadow-inner"></main>
@@ -347,7 +397,7 @@
                     </svg>
                     <span>Research & Tech</span>
                 </button>
-                <button id="next-season-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+                <button id="next-season-btn" class="hidden w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
                     <span>Advance to Next Season</span>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" />
