@@ -340,8 +340,18 @@ export function logEvent(message, type = "NEUTRAL") {
     else if (type === 'CHALLENGE' || type === 'error') audioManager.playChallenge();
 
     const eventElement = document.createElement('div');
-    eventElement.className = `border rounded p-2 mb-2 ${colors[type]}`;
-    eventElement.innerHTML = `<span class="font-semibold">${icons[type]} ${type}:</span> ${message}`;
+    eventElement.className = `border-l-4 rounded-r p-2 mb-2 text-xs shadow-sm ${colors[type].replace('border-', 'border-l-')}`; // Use left border color logic slightly diff
+    // Fix color classes mapping for new style
+    let colorClass = 'border-gray-300 bg-white';
+    if (type === 'BOON') colorClass = 'border-nature-500 bg-nature-50';
+    if (type === 'CHALLENGE' || type === 'error') colorClass = 'border-red-500 bg-red-50';
+
+    eventElement.className = `border-l-4 rounded-r-lg p-3 mb-2 text-xs shadow-sm flex gap-2 items-start ${colorClass}`;
+
+    eventElement.innerHTML = `
+        <span class="text-base leading-none mt-0.5">${icons[type]}</span>
+        <span class="text-soil-800 leading-snug">${message}</span>
+    `;
 
     if (dom.eventLog) {
         dom.eventLog.prepend(eventElement);
@@ -355,9 +365,12 @@ export function logEvent(message, type = "NEUTRAL") {
 export function logAdvisor(message) {
     if (dom.advisorLog) {
         dom.advisorLog.innerHTML = `
-            <div class="bg-blue-100 border border-blue-200 rounded p-3">
-                <div class="font-semibold text-blue-800">💡 Advisor:</div>
-                <div class="mt-1 text-blue-700">${message}</div>
+            <div class="bg-white border border-blue-100 border-l-4 border-l-blue-400 rounded-lg p-3 shadow-sm flex gap-3">
+                <div class="text-2xl">💡</div>
+                <div>
+                    <div class="font-bold text-blue-900 text-xs uppercase tracking-wide mb-1">Advisor</div>
+                    <div class="text-sm text-soil-700 leading-snug">${message}</div>
+                </div>
             </div>
         `;
     }
