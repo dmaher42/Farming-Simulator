@@ -26,7 +26,19 @@ export function initializeGame(biome) {
         const plotEl = document.createElement('div');
         plotEl.className = 'plot';
         plotEl.dataset.plotId = p.id;
+
+        // Accessibility: Make plots keyboard interactive
+        plotEl.tabIndex = 0;
+        plotEl.setAttribute('role', 'button');
+        plotEl.setAttribute('aria-label', `Plot ${p.id + 1}: Empty`);
+
         plotEl.addEventListener('click', () => onPlotClick(p.id));
+        plotEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onPlotClick(p.id);
+            }
+        });
 
         // Add moisture indicator
         const moistureIndicator = document.createElement('div');

@@ -265,6 +265,18 @@ function renderPlots() {
         plotEl.style.backgroundImage = `url('${soilBg}')`;
         plotEl.style.backgroundSize = 'cover';
 
+        // Update ARIA label for accessibility
+        let label = `Plot ${index + 1}: `;
+        if (plot.crop) {
+            const crop = gameState.currentBiome.crops[plot.crop];
+            const status = plot.isMature ? "Ready to harvest" : "Growing";
+            label += `${crop.name}, ${status}, Moisture ${Math.floor(plot.moisture)}%`;
+        } else {
+            label += `Empty, Moisture ${Math.floor(plot.moisture)}%`;
+            if (plot.isFertile) label += ", Fertile";
+        }
+        plotEl.setAttribute('aria-label', label);
+
         if (plot.crop) {
             const crop = gameState.currentBiome.crops[plot.crop];
             // Use stored growthProgress
