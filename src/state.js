@@ -15,7 +15,8 @@ export const gameState = {
         isMature: false,
         isFertile: false,
         moisture: 50,
-        lastCrop: null
+        lastCrop: null,
+        growthProgress: 0
     })),
     selectedCrop: null,
     activePractice: null,
@@ -31,7 +32,13 @@ export const gameState = {
     market: { prices: {} },
 
     // Quests
-    activeQuest: null
+    activeQuest: null,
+
+    // Real-time
+    seasonProgress: 0, // 0 to 100
+    isPaused: false,
+    speed: 1, // Multiplier
+    activeNPC: null
 };
 
 export function resetGameState(biome) {
@@ -49,7 +56,8 @@ export function resetGameState(biome) {
         isMature: false,
         isFertile: false,
         moisture: 50,
-        lastCrop: null
+        lastCrop: null,
+        growthProgress: 0
     }));
     gameState.selectedCrop = null;
     gameState.activePractice = null;
@@ -60,6 +68,10 @@ export function resetGameState(biome) {
     gameState.unlockedUpgrades = [];
     gameState.market = { prices: {} };
     gameState.activeQuest = null;
+    gameState.seasonProgress = 0;
+    gameState.isPaused = false;
+    gameState.speed = 1;
+    gameState.activeNPC = null;
 }
 
 export function saveGame() {

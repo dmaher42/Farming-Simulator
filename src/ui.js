@@ -47,6 +47,13 @@ export function initDOM() {
     dom.questPanel = document.getElementById('quest-panel');
     dom.questTimer = document.getElementById('quest-timer');
 
+    // Time Control DOM
+    dom.pauseBtn = document.getElementById('pause-btn');
+    dom.pauseText = document.getElementById('pause-text');
+    dom.pauseIcon = document.getElementById('pause-icon');
+    dom.sleepBtn = document.getElementById('sleep-btn');
+    dom.seasonProgress = document.getElementById('season-progress');
+
     // Guide DOM
     dom.guideBtn = document.getElementById('guide-btn');
     dom.guideModal = document.getElementById('guide-modal');
@@ -111,11 +118,34 @@ export function updateUI() {
     const nextSeasonIndex = (gameState.currentSeasonIndex + 1) % 4;
     dom.nextSeason.textContent = SEASONS[nextSeasonIndex];
 
+    // Update Time Controls
+    updateTimeControls();
+
     // Update Quest UI
     updateQuestUI();
 
     // Update plots
     renderPlots();
+}
+
+function updateTimeControls() {
+    if (dom.seasonProgress) {
+        dom.seasonProgress.style.width = `${gameState.seasonProgress}%`;
+    }
+
+    if (dom.pauseBtn) {
+        if (gameState.isPaused) {
+            dom.pauseText.textContent = "Resume";
+            dom.pauseIcon.textContent = "▶️";
+            dom.pauseBtn.classList.add('bg-green-600');
+            dom.pauseBtn.classList.remove('bg-gray-600');
+        } else {
+            dom.pauseText.textContent = "Pause";
+            dom.pauseIcon.textContent = "⏸️";
+            dom.pauseBtn.classList.remove('bg-green-600');
+            dom.pauseBtn.classList.add('bg-gray-600');
+        }
+    }
 }
 
 function updateQuestUI() {
@@ -193,8 +223,9 @@ function renderPlots() {
 
         if (plot.crop) {
             const crop = gameState.currentBiome.crops[plot.crop];
-            const seasonsGrown = (gameState.currentSeasonIndex + (gameState.year - 1) * 4) - plot.plantedAt;
-            let growthPercentage = Math.min(100, (seasonsGrown / crop.growthTime) * 100);
+            // Use stored growthProgress
+            let growthPercentage = Math.min(100, plot.growthProgress || 0);
+
             if (plot.isMature) growthPercentage = 100;
 
             // Visual Growth Stages

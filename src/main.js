@@ -9,7 +9,9 @@ import {
     openPlotModal,
     getCropAdvice,
     getPracticeAdvice,
-    handlePlotClick
+    handlePlotClick,
+    togglePause,
+    sleepSeason
 } from './game.js';
 import { openResearchModal, closeResearchModal } from './upgrades.js';
 import { loadGame, gameState } from './state.js';
@@ -24,6 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
     dom.closeModalBtn.addEventListener('click', closeModal);
     dom.researchBtn.addEventListener('click', openResearchModal);
     dom.closeResearchBtn.addEventListener('click', closeResearchModal);
+
+    // Time Controls
+    dom.pauseBtn.addEventListener('click', togglePause);
+    dom.sleepBtn.addEventListener('click', sleepSeason);
 
     dom.guideBtn.addEventListener('click', () => {
         dom.guideModal.classList.remove('hidden');

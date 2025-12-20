@@ -2,6 +2,11 @@ import { gameState, resetGameState, saveGame } from './state.js';
 import { dom, updateUI, logEvent, logAdvisor } from './ui.js';
 import { SEASONS, WEATHER_EMOJIS, COMMUNITY_SIZE, FOOD_PER_PERSON, MANAGEMENT_PRACTICES, UPGRADES } from './data.js';
 import { initializeMarket, updateMarketPrices, getCropPrice } from './market.js';
+import { spawnNPC, updateNPCs } from './npcs.js';
+
+let gameLoopId = null;
+const TICK_RATE = 100; // ms
+const SEASON_DURATION = 60000; // 60 seconds
 
 export function initializeGame(biome) {
     resetGameState(biome);
@@ -99,6 +104,108 @@ export function initializeGame(biome) {
 
     updateWeather();
     updateUI();
+    startGameLoop();
+}
+
+function startGameLoop() {
+    if (gameLoopId) clearInterval(gameLoopId);
+    gameLoopId = setInterval(gameTick, TICK_RATE);
+}
+
+function gameTick() {
+    if (gameState.isPaused || dom.endGameModal.classList.contains('hidden') === false) return;
+
+    // Advance Season Progress
+    const increment = (TICK_RATE / SEASON_DURATION) * 100 * gameState.speed;
+    gameState.seasonProgress += increment;
+
+    // Soil Moisture Decay (Gradual)
+    // Lose ~20 moisture per season -> 20 / (60000/100) = 0.033 per tick
+    const moistureLossPerTick = 20 / (SEASON_DURATION / TICK_RATE);
+
+    // Growth Tick (100% per season normally, so same increment as progress)
+    // But crop has growthTime (in seasons).
+    // So growth per tick = increment / growthTime
+
+    gameState.plots.forEach(plot => {
+        if (plot.crop && !plot.isMature) {
+            // Moisture Decay
+            plot.moisture = Math.max(0, plot.moisture - moistureLossPerTick);
+
+            // Growth Logic
+            if (plot.moisture > 20) {
+                 const crop = gameState.currentBiome.crops[plot.crop];
+                 const growthPerTick = increment / crop.growthTime;
+                 plot.growthProgress += growthPerTick;
+
+                 if (plot.growthProgress >= 100) {
+                     plot.isMature = true;
+                     plot.growthProgress = 100;
+                     logEvent(`${crop.name} in plot ${plot.id + 1} is ready to harvest!`, "BOON");
+                 }
+            } else {
+                // Stunted growth due to drought
+                // Optionally: could even damage the crop or reduce growthProgress?
+            }
+        } else if (plot.crop && plot.isMature) {
+             // Still lose moisture even if mature? Yes.
+             plot.moisture = Math.max(0, plot.moisture - moistureLossPerTick);
+        }
+    });
+
+    // NPC Logic
+    if (Math.random() < 0.005) { // Small chance per tick to spawn NPC
+        spawnNPC();
+    }
+    updateNPCs();
+
+    if (gameState.seasonProgress >= 100) {
+        advanceSeason();
+    } else {
+        updateUI(); // Frequent UI updates for progress bars
+    }
+}
+
+export function togglePause() {
+    gameState.isPaused = !gameState.isPaused;
+    updateUI();
+}
+
+export function sleepSeason() {
+    // Simulate passing of remaining time to prevent exploit
+    const remainingProgress = 100 - gameState.seasonProgress;
+    if (remainingProgress <= 0) return;
+
+    // Calculate how many ticks that represents roughly
+    // remainingPct / (100pct / duration) -> ratio
+    // Simpler: Apply moisture loss proportional to remaining progress
+
+    // Total moisture loss per season is ~20.
+    const moistureLoss = (remainingProgress / 100) * 20;
+
+    gameState.plots.forEach(plot => {
+        if (plot.crop) {
+            plot.moisture = Math.max(0, plot.moisture - moistureLoss);
+            // We could also simulate growth here, but sleep implies "skipping work",
+            // so maybe crops grow but soil dries out severely?
+            // Let's grant growth too, assuming they survive the moisture drop.
+
+            if (!plot.isMature && plot.moisture > 20) { // Check moisture AFTER drop? Or average?
+                // Let's use current moisture state to decide if they grow during sleep
+                // This penalizes sleeping if already low on water.
+                const crop = gameState.currentBiome.crops[plot.crop];
+                const growthGain = remainingProgress / crop.growthTime;
+                plot.growthProgress += growthGain;
+                if (plot.growthProgress >= 100) {
+                    plot.isMature = true;
+                    plot.growthProgress = 100;
+                }
+            }
+        }
+    });
+
+    gameState.seasonProgress = 100; // Trigger advance next tick
+    gameTick();
 }
 
 export function selectCrop(cropId, button) {
@@ -158,7 +265,8 @@ function plantCrop(plotIndex) {
     gameState.plots[plotIndex] = {
         ...gameState.plots[plotIndex],
         crop: cropId,
-        plantedAt: gameState.currentSeasonIndex + (gameState.year - 1) * 4,
+        plantedAt: gameState.currentSeasonIndex + (gameState.year - 1) * 4 + (gameState.seasonProgress / 100), // Keep for stats
+        growthProgress: 0,
         isMature: false,
         lastCrop: cropId,
         moisture: 50 // Reset moisture when planting
@@ -180,6 +288,10 @@ function plantCrop(plotIndex) {
 }
 
 export function openPlotModal(plotIndex) {
+    // Pause game while modal is open
+    gameState.isPaused = true;
+    updateUI(); // Reflect pause state
+
     const plot = gameState.plots[plotIndex];
     const crop = gameState.currentBiome.crops[plot.crop];
 
@@ -232,7 +344,7 @@ export function openPlotModal(plotIndex) {
         <div class="text-center font-semibold">${crop.name}</div>
         <div class="grid grid-cols-2 gap-2 mt-3 text-sm">
             <div>Moisture:</div>
-            <div class="text-right">${plot.moisture}%</div>
+            <div class="text-right">${Math.floor(plot.moisture)}%</div>
             <div>Status:</div>
             <div class="text-right">${plot.isMature ? 'Ready to harvest' : 'Growing'}</div>
             <div>Water need:</div>
@@ -260,6 +372,8 @@ export function closeModal() {
     setTimeout(() => {
         dom.plotModal.classList.add('hidden');
     }, 300);
+    gameState.isPaused = false; // Resume game
+    updateUI();
 }
 
 function handleHarvest(plotIndex) {
@@ -392,47 +506,24 @@ function clearPlot(plotIndex) {
 }
 
 export function advanceSeason() {
+    gameState.seasonProgress = 0; // Reset progress
+
     // 1. Apply Management Practice & Deduct Food
     applyManagementPractice();
     const foodDemand = COMMUNITY_SIZE * FOOD_PER_PERSON;
     gameState.food -= foodDemand;
 
-    // 2. Update soil moisture for all plots
-    gameState.plots.forEach(plot => {
-        if (plot.crop) {
-            // Moisture decreases each season
-            plot.moisture = Math.max(0, plot.moisture - 20);
-
-            // If moisture is too low, crop growth is stunted
-            if (plot.moisture < 20) {
-                const crop = gameState.currentBiome.crops[plot.crop];
-                if (crop.traits && crop.traits.includes('drought_resistant')) {
-                    // Less damage
-                } else {
-                    logEvent(`Crop in plot ${plot.id + 1} is suffering from drought conditions.`, "CHALLENGE");
-                }
-            }
-        }
-    });
+    // 2. Update soil moisture for all plots (Major drop on season change)
+    // Note: gradual decay happens in gameTick, but we might want a seasonal hit too?
+    // Let's reduce the seasonal hit since we have gradual decay.
+    // gameState.plots.forEach(plot => {
+    //    if (plot.crop) {
+    //        plot.moisture = Math.max(0, plot.moisture - 10); // Reduced from 20
+    //    }
+    // });
 
     // 3. Grow crops
-    gameState.plots.forEach(plot => {
-        if (plot.crop) {
-            const crop = gameState.currentBiome.crops[plot.crop];
-            const seasonsGrown = (gameState.currentSeasonIndex + (gameState.year - 1) * 4) - plot.plantedAt;
-
-            // Growth is slower if moisture is low
-            let growthRate = plot.moisture > 30 ? 1 : 0.5;
-
-            if (crop.traits && crop.traits.includes('drought_resistant') && plot.moisture <= 30) {
-                growthRate = 0.8; // Resistant crops grow better in drought
-            }
-
-            if (seasonsGrown >= (crop.growthTime - 1) * growthRate) {
-                plot.isMature = true;
-            }
-        }
-    });
+    // We rely on ticks, but double check? No, reliance on ticks is better for real-time consistency.
 
     // 4. Advance season & year
     gameState.currentSeasonIndex++;
@@ -506,7 +597,8 @@ function updateWeather() {
 function applyManagementPractice() {
     const practiceId = gameState.activePractice;
     if (!practiceId) {
-        logEvent("No management practice chosen for the season.");
+        // logEvent("No management practice chosen for the season.");
+        // Silent failure in real-time is better, or just a notification at end of season?
         return;
     }
 
@@ -685,7 +777,9 @@ function giveAdvice() {
 }
 
 function endGame(isWin) {
-    dom.nextSeasonBtn.disabled = true;
+    if (gameLoopId) clearInterval(gameLoopId); // Stop the loop
+
+    // dom.nextSeasonBtn.disabled = true; // No longer relevant
     let message;
 
     if (isWin) {
