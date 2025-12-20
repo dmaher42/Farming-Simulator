@@ -3,13 +3,18 @@ import { dom, updateUI, logEvent, logAdvisor } from './ui.js';
 import { SEASONS, WEATHER_EMOJIS, COMMUNITY_SIZE, FOOD_PER_PERSON, MANAGEMENT_PRACTICES, UPGRADES } from './data.js';
 import { initializeMarket, updateMarketPrices, getCropPrice } from './market.js';
 import { spawnNPC, updateNPCs } from './npcs.js';
+import { audioManager } from './audio.js';
+import { tutorialManager } from './tutorial.js';
 
 let gameLoopId = null;
 const TICK_RATE = 100; // ms
 const SEASON_DURATION = 60000; // 60 seconds
 
 export function initializeGame(biome) {
+    const wantsTutorial = gameState.wantsTutorial; // Preserve flag
     resetGameState(biome);
+    gameState.wantsTutorial = wantsTutorial; // Restore
+
     initializeMarket();
 
     dom.farmGrid.innerHTML = '';
@@ -102,8 +107,17 @@ export function initializeGame(biome) {
     logAdvisor("Welcome to your new farm! Start by planting some crops. Different crops thrive in different seasons, so plan carefully.");
     logEvent(`Your farm in the ${biome.name} has been established. The soil is fertile and ready for planting.`);
 
+    audioManager.init();
+    audioManager.startAmbience(biome.id);
+
     updateWeather();
     updateUI();
+
+    tutorialManager.init();
+    if (gameState.wantsTutorial) {
+        tutorialManager.start();
+    }
+
     startGameLoop();
 }
 
@@ -142,6 +156,7 @@ function gameTick() {
                      plot.isMature = true;
                      plot.growthProgress = 100;
                      logEvent(`${crop.name} in plot ${plot.id + 1} is ready to harvest!`, "BOON");
+                     tutorialManager.checkHarvest();
                  }
             } else {
                 // Stunted growth due to drought
@@ -272,6 +287,7 @@ function plantCrop(plotIndex) {
         moisture: 50 // Reset moisture when planting
     };
 
+    audioManager.playPlant();
     logEvent(`Planted ${crop.name} on plot ${plotIndex + 1}.`, 'BOON');
 
     // Animation effect
@@ -443,6 +459,8 @@ function handleHarvest(plotIndex) {
     plotEl.classList.add('pulse');
     setTimeout(() => plotEl.classList.remove('pulse'), 500);
 
+    audioManager.playHarvest();
+    audioManager.playMoney();
     logEvent(`Harvested ${crop.name}. Sold ${yieldAmount} units @ $${pricePerUnit.toFixed(1)}/unit for $${moneyGained}.`, 'BOON');
 
     if (plot.isFertile) {

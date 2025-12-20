@@ -1,5 +1,8 @@
 import { gameState } from './state.js';
 import { SEASONS, SEASON_EMOJIS, SEASON_CLASSES, COMMUNITY_SIZE, FOOD_PER_PERSON } from './data.js';
+import { audioManager } from './audio.js';
+import { openMarketModal, closeMarketModal } from './market_ui.js';
+import { tutorialManager } from './tutorial.js';
 
 export const dom = {};
 
@@ -47,6 +50,19 @@ export function initDOM() {
     dom.questPanel = document.getElementById('quest-panel');
     dom.questTimer = document.getElementById('quest-timer');
 
+    // Market DOM
+    dom.marketBtn = document.getElementById('market-btn');
+    dom.marketModal = document.getElementById('market-modal');
+    dom.closeMarketBtn = document.getElementById('close-market-btn');
+    dom.marketCanvas = document.getElementById('market-canvas');
+
+    if (dom.marketBtn) {
+        dom.marketBtn.addEventListener('click', openMarketModal);
+    }
+    if (dom.closeMarketBtn) {
+        dom.closeMarketBtn.addEventListener('click', closeMarketModal);
+    }
+
     // Time Control DOM
     dom.pauseBtn = document.getElementById('pause-btn');
     dom.pauseText = document.getElementById('pause-text');
@@ -59,6 +75,34 @@ export function initDOM() {
     dom.guideModal = document.getElementById('guide-modal');
     dom.closeGuideBtn = document.getElementById('close-guide-btn');
     dom.weatherEffectOverlay = document.getElementById('weather-effect-overlay');
+    dom.muteBtn = document.getElementById('mute-btn');
+    dom.startTutorialBtn = document.getElementById('start-tutorial-btn');
+
+    if (dom.startTutorialBtn) {
+        dom.startTutorialBtn.addEventListener('click', () => {
+             // For now, toggle a flag or just wait for game start
+             // We'll auto-start tutorial if this was clicked once game initializes
+             dom.startTutorialBtn.classList.add('bg-green-300', 'border-green-500');
+             dom.startTutorialBtn.textContent = "Tutorial Selected";
+             gameState.wantsTutorial = true;
+        });
+    }
+
+    // Audio Init Binding
+    if (dom.muteBtn) {
+        dom.muteBtn.addEventListener('click', () => {
+            const isMuted = audioManager.toggleMute();
+            dom.muteBtn.textContent = isMuted ? "🔇 Sound: Off" : "🔊 Sound: On";
+        });
+    }
+
+    // Attach click sounds to common buttons
+    document.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            audioManager.init(); // Try init on any click
+            audioManager.playClick();
+        });
+    });
 }
 
 export function updateUI() {
@@ -290,6 +334,10 @@ export function logEvent(message, type = "NEUTRAL") {
         BOON: '✅',
         NEUTRAL: '📝'
     };
+
+    // Play sound based on type
+    if (type === 'BOON') audioManager.playBoon();
+    else if (type === 'CHALLENGE' || type === 'error') audioManager.playChallenge();
 
     const eventElement = document.createElement('div');
     eventElement.className = `border rounded p-2 mb-2 ${colors[type]}`;

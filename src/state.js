@@ -38,7 +38,8 @@ export const gameState = {
     seasonProgress: 0, // 0 to 100
     isPaused: false,
     speed: 1, // Multiplier
-    activeNPC: null
+    activeNPC: null,
+    wantsTutorial: false
 };
 
 export function resetGameState(biome) {
@@ -72,6 +73,7 @@ export function resetGameState(biome) {
     gameState.isPaused = false;
     gameState.speed = 1;
     gameState.activeNPC = null;
+    gameState.wantsTutorial = false;
 }
 
 export function saveGame() {
